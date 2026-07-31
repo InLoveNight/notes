@@ -18,6 +18,7 @@ export default [
         items: [
             { text: 'Linux 磁盘管理', link: 'docs/develop/system/linux-storage' },
             { text: 'Linux Samba', link: 'docs/develop/system/linux-samba' },
+            { text: 'Linux 网络发现', link: 'docs/develop/system/linux-wsdd' },
         ]
     },
     {
