@@ -24,31 +24,12 @@ LXC 共享宿主机内核，资源占用低、启动速度快，但安全性较�
 
 ## 2. 下载容器模板
 
-### 2.1 更换国内源（加速下载）
-
-PVE 官方源在国外，建议替换为清华源：
-
-```bash
-# 备份原文件
-cp /usr/share/perl5/PVE/APLInfo.pm /usr/share/perl5/PVE/APLInfo.pm_back
-
-# 替换为清华源
-sed -i 's|http://download.proxmox.com|https://mirrors.tuna.tsinghua.edu.cn/proxmox|g' /usr/share/perl5/PVE/APLInfo.pm
-
-# 重启服务生效
-systemctl restart pvedaemon.service
-```
-
-### 2.2 下载模板
-
 - **Web 界面方式：** 数据中心 → 你的 PVE 节点 → local 存储 → CT模板 → 选择模板下载（如 Debian、Ubuntu）
 - **命令行方式：**
 
 ```bash
 pveam download local debian-12-standard_12.0-1_amd64.tar.zst
 ```
-
-
 
 ## 3. 创建容器
 
@@ -61,8 +42,6 @@ pveam download local debian-12-standard_12.0-1_amd64.tar.zst
 3. **磁盘：** 默认 8GB，建议根据需求调整（运行 Docker 建议 20-50GB）
 4. **CPU/内存：** 按需分配
 5. **网络：** 桥接选择 `vmbr0`，配置静态 IP 或 DHCP
-
-⚠️ **关键选项：** 如需特权容器（挂载 NFS/硬件），**取消勾选**「无特权的容器」。
 
 ### 3.2 命令行创建（特权模式示例）
 
@@ -87,45 +66,15 @@ pct status <CTID>    # 查看状态
 
 
 
-## 4. 容器配置进阶
-
-### 4.1 启用嵌套虚拟化与 FUSE
-
-如需在 LXC 内运行 Docker 或挂载网盘，编辑容器配置文件：
-
-```bash
-nano /etc/pve/lxc/<CTID>.conf
-```
-
-添加以下内容开启高级功能：
-
-```text
-features: nesting=1,fuse=1
-```
-
-### 4.2 硬件直通配置（GPU/核显）
-
-以 Intel 核显（/dev/dri）为例，在配置文件中添加：
-
-```text
-lxc.cgroup2.devices.allow: c 226:0 rwm
-lxc.cgroup2.devices.allow: c 226:128 rwm
-lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir
-lxc.apparmor.profile: unconfined
-```
-
-### 4.3 在特权容器中安装 Docker
-
-- 配置文件中需添加 `features: keyctl=1,nesting=1`
-- 安装 Docker 后验证：`docker run hello-world`
-
-
-
-## 5. 映射宿主机目录（Bind Mounts）
+## 4. 映射宿主机目录（Bind Mounts）
 
 这是 LXC 最常用的功能之一，但**特权容器与无特权容器处理方式不同**。
 
-### 5.1 方法一：通过 pct set 命令（推荐）
+>    [!TIP] 提示
+>
+>   如果需要映射多个目录，则 `-mp0` 往上增加即可：`-mp1` `-mp2` ...
+
+### 4.1 方法一：通过 pct set 命令（推荐）
 
 ```bash
 pct set <CTID> -mp0 /宿主机/路径,mp=/容器内/挂载点
@@ -137,7 +86,7 @@ pct set <CTID> -mp0 /宿主机/路径,mp=/容器内/挂载点
 pct set 102 -mp0 /mnt/pve/data,mp=/data
 ```
 
-### 5.2 方法二：直接编辑配置文件
+### 4.2 方法二：直接编辑配置文件
 
 ```bash
 nano /etc/pve/lxc/<CTID>.conf
@@ -149,37 +98,15 @@ nano /etc/pve/lxc/<CTID>.conf
 mp0: /mnt/pve/data,mp=/data
 ```
 
-### 5.3 ⚠️ 无特权容器的权限处理
+## 5. 配置检查与生效
 
-无特权容器存在 UID/GID 映射问题，宿主机文件的所有权与容器内不一致。解决方案：
-
-1. **方案 A：改用特权容器**（最简单，安全性略降）
-2. **方案 B：调整目录权限**：在宿主机上将目录所有者改为容器映射的 UID/GID
-3. **方案 C：配置 idmap 映射**（高级），如：
-
-```text
-mp0: /mnt/pve/data,mp=/data,idmap=u:1000:100000:1;g:1000:100000:1
-```
-
-### 5.4 直接挂载 NFS/SMB（仅限特权容器）
-
-若在特权容器内直接挂载网络存储：
-
-```text
-lxc.mount.auto: cgroup:rw proc:rw sys:rw
-```
-
-
-
-## 6. 配置检查与生效
-
-### 6.1 重启容器使配置生效
+### 5.1 重启容器使配置生效
 
 ```bash
 pct stop <CTID> && pct start <CTID>
 ```
 
-### 6.2 验证挂载是否成功
+### 5.2 验证挂载是否成功
 
 进入容器检查：
 
@@ -189,10 +116,73 @@ df -h | grep /data   # 确认挂载点存在
 ls -la /data         # 检查文件权限
 ```
 
-### 6.3 查看容器完整配置
+### 5.3 查看容器完整配置
 
 ```bash
 cat /etc/pve/lxc/<CTID>.conf
+```
+
+
+
+## 6. 导出容器
+
+要在 Proxmox VE (PVE) 中将自己配置好的 LXC 容器打包成自定义 CT 模板，并支持在 PVE Web 界面（`local` -> `CT 模板`）直接上传使用，最简单标准的方法是**先停止容器，再导出为 `.tar.zst` (或 `.tar.gz`) 压缩包**。
+
+
+
+### 6.1 第一步：清理容器（可选，但强烈建议）
+
+在打包之前，建议清理容器内的临时文件和历史记录，以减小模板体积并保证安全性：
+
+1. 登录到你想要打包的 LXC 容器内部。
+2. 清理软件包缓存和日志：
+
+``` bash
+# Debian / Ubuntu
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+
+# CentOS / Rocky Linux / AlmaLinux
+dnf clean all
+
+# 清理日志与命令历史
+rm -rf /var/log/*
+history -c
+```
+
+3. 关机容器：在 PVE 界面或容器内执行 `poweroff`。
+
+
+
+### 6.2 在 PVE 宿主机上打包容器
+
+在 PVE 的 **Shell（终端）** 中执行打包命令。假设你的容器 ID 是 **`100`**，你想生成的模板名称为 **`my-custom-template.tar.zst`**：
+
+1.  **进入备份/临时目录**（确保有足够的磁盘空间）：
+
+    ```bash
+    cd /var/lib/vz/template/cache
+    ```
+
+    >   **小技巧**：直接在 `/var/lib/vz/template/cache` 目录下打包，PVE 网页端会**自动识别**该模板，你甚至都不用手动上传！
+
+2.  **执行打包命令**： 使用 PVE 自带的 `vzdump` 命令，以 `stop` 模式打包，格式指定为 `zstd`（压缩比高且速度快）：
+
+    ```bash
+    vzdump 100 --compress zstd --dumpdir /var/lib/vz/template/cache --mode stop
+    ```
+
+    *说明：这会在该目录下生成一个类似于 `vzdump-openvz-100-2026_07_31-xx_xx_xx.tar.zst` 的文件。*
+
+
+
+### 6.3 重命名并符合上传/使用规范
+
+PVE 对模板文件的命名有一定规范，虽然默认导出的 `vzdump-openvz-...` 文件可以直接用来创建容器，但如果你想把它当成标准的 CT 模板（甚至分享给别人从 Web 界面上传），建议重命名：
+
+```bash
+# 重命名为一个清晰的名字（保持 .tar.zst 或 .tar.gz 后缀）
+mv vzdump-openvz-100-*.tar.zst ubuntu-22.04-custom-v1.tar.zst
 ```
 
 
