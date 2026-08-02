@@ -5,6 +5,10 @@
     --vp-font-family-mono: "Maple Mono NF CN", ui-monospace, 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
 }
 
+h1{
+    text-align: center;
+    margin-bottom: 50px;
+}
 
 /* 文档内所有图片居中 */
 .vp-doc p img{

@@ -28,6 +28,14 @@ export default [
             { text: 'PVE LXC', link: 'docs/develop/pve/pve-lxc' },
             { text: 'Linux Openwrt', link: 'docs/develop/pve/pve-openwrt' },
         ]
+    },
+    {
+        text: 'Windows',
+        collapsed: false,
+        items: [
+            { text: 'Hyper-v 差分磁盘', link: 'docs/develop/windows/hyper-v-differencing' },
+            { text: 'Hyper-v 创建虚拟磁盘', link: 'docs/develop/windows/hyper-v-new-vhd' },
+        ]
     }
 
 ] satisfies DefaultTheme.SidebarItem[]
