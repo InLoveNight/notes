@@ -142,6 +142,12 @@ cat /etc/pve/lxc/<CTID>.conf
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 
+# 清理 ssh 记录
+rm -f /etc/ssh/ssh_host_*
+
+# 清理设备 id
+truncate -s 0 /etc/machine-id
+
 # CentOS / Rocky Linux / AlmaLinux
 dnf clean all
 
