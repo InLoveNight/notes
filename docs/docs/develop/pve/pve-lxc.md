@@ -160,19 +160,20 @@ history -c
 
 1.  **进入备份/临时目录**（确保有足够的磁盘空间）：
 
-    ```bash
-    cd /var/lib/vz/template/cache
-    ```
+```bash
+cd /var/lib/vz/template/cache
+```
 
-    >   **小技巧**：直接在 `/var/lib/vz/template/cache` 目录下打包，PVE 网页端会**自动识别**该模板，你甚至都不用手动上传！
+> [!NOTE] 小技巧   
+> 直接在 `/var/lib/vz/template/cache` 目录下打包，PVE 网页端会**自动识别**该模板，你甚至都不用手动上传！
 
 2.  **执行打包命令**： 使用 PVE 自带的 `vzdump` 命令，以 `stop` 模式打包，格式指定为 `zstd`（压缩比高且速度快）：
 
-    ```bash
-    vzdump 100 --compress zstd --dumpdir /var/lib/vz/template/cache --mode stop
-    ```
+```bash
+vzdump 100 --compress zstd --dumpdir /var/lib/vz/template/cache --mode stop
+```
 
-    *说明：这会在该目录下生成一个类似于 `vzdump-openvz-100-2026_07_31-xx_xx_xx.tar.zst` 的文件。*
+*说明：这会在该目录下生成一个类似于 `vzdump-openvz-100-2026_07_31-xx_xx_xx.tar.zst` 的文件。*
 
 
 
